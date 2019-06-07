@@ -19,8 +19,7 @@ class TestQueryResourceGet(BaseTestCase):
         self.assertResponseEqual(expected, rv.json)
 
     def test_get_all_queries(self):
-        queries = [self.factory.create_query() for _ in range(10)]
-
+        [self.factory.create_query() for _ in range(10)]
         rv = self.make_request('get', '/api/queries')
 
         self.assertEquals(rv.status_code, 200)
@@ -123,6 +122,11 @@ class TestQueryResourcePost(BaseTestCase):
 
         options = {
             'parameters': [{
+                'name': 'foo',
+                'type': 'query',
+                'queryId': other_query.id
+            }, {
+                'name': 'bar',
                 'type': 'query',
                 'queryId': other_query.id
             }]
@@ -252,6 +256,11 @@ class TestQueryListResourcePost(BaseTestCase):
             'data_source_id': self.factory.data_source.id,
             'options': {
                 'parameters': [{
+                    'name': 'foo',
+                    'type': 'query',
+                    'queryId': other_query.id
+                }, {
+                    'name': 'bar',
                     'type': 'query',
                     'queryId': other_query.id
                 }]

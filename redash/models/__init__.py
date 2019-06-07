@@ -1,12 +1,9 @@
-import cStringIO
-import csv
 import datetime
 import calendar
 import logging
 import time
 import pytz
 
-import xlsxwriter
 from six import python_2_unicode_compatible, text_type
 from sqlalchemy import distinct, or_, and_, UniqueConstraint
 from sqlalchemy.dialects import postgresql
@@ -25,7 +22,7 @@ from redash.destinations import (get_configuration_schema_for_destination_type,
                                  get_destination)
 from redash.metrics import database  # noqa: F401
 from redash.query_runner import (get_configuration_schema_for_query_runner_type,
-                                 get_query_runner)
+                                 get_query_runner, TYPE_BOOLEAN, TYPE_DATE, TYPE_DATETIME)
 from redash.utils import generate_token, json_dumps, json_loads
 from redash.utils.configuration import ConfigurationContainer
 from redash.models.parameterized_query import ParameterizedQuery
@@ -74,7 +71,7 @@ class DataSource(BelongsToOrgMixin, db.Model):
 
     name = Column(db.String(255))
     type = Column(db.String(255))
-    options = Column('encrypted_options', ConfigurationContainer.as_mutable(EncryptedConfiguration(db.Text, settings.SECRET_KEY, FernetEngine)))
+    options = Column('encrypted_options', ConfigurationContainer.as_mutable(EncryptedConfiguration(db.Text, settings.DATASOURCE_SECRET_KEY, FernetEngine)))
     queue_name = Column(db.String(255), default="queries")
     scheduled_queue_name = Column(db.String(255), default="scheduled_queries")
     created_at = Column(db.DateTime(True), default=db.func.now())
@@ -322,41 +319,6 @@ class QueryResult(db.Model, BelongsToOrgMixin):
     def groups(self):
         return self.data_source.groups
 
-    def make_csv_content(self):
-        s = cStringIO.StringIO()
-
-        query_data = json_loads(self.data)
-        writer = csv.DictWriter(s, extrasaction="ignore", fieldnames=[col['name'] for col in query_data['columns']])
-        writer.writer = utils.UnicodeWriter(s)
-        writer.writeheader()
-        for row in query_data['rows']:
-            writer.writerow(row)
-
-        return s.getvalue()
-
-    def make_excel_content(self):
-        s = cStringIO.StringIO()
-
-        query_data = json_loads(self.data)
-        book = xlsxwriter.Workbook(s, {'constant_memory': True})
-        sheet = book.add_worksheet("result")
-
-        column_names = []
-        for (c, col) in enumerate(query_data['columns']):
-            sheet.write(0, c, col['name'])
-            column_names.append(col['name'])
-
-        for (r, row) in enumerate(query_data['rows']):
-            for (c, name) in enumerate(column_names):
-                v = row.get(name)
-                if isinstance(v, list) or isinstance(v, dict):
-                    v = str(v).encode('utf-8')
-                sheet.write(r + 1, c, v)
-
-        book.close()
-
-        return s.getvalue()
-
 
 def should_schedule_next(previous_iteration, now, interval, time=None, day_of_week=None, failures=0):
     # if time exists then interval > 23 hours (82800s)
@@ -498,7 +460,6 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
                 contains_eager(Query.user),
                 contains_eager(Query.latest_query_data),
             )
-            .order_by(Query.created_at.desc())
         )
 
         if not include_drafts:
@@ -545,6 +506,10 @@ class Query(ChangeTrackingMixin, TimestampMixin, BelongsToOrgMixin, db.Model):
     @classmethod
     def by_user(cls, user):
         return cls.all_queries(user.group_ids, user.id).filter(Query.user == user)
+
+    @classmethod
+    def by_api_key(cls, api_key):
+        return cls.query.filter(cls.api_key == api_key).one()
 
     @classmethod
     def outdated_queries(cls):

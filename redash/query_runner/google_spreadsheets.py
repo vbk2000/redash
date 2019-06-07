@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 try:
     import gspread
-    from gspread.httpsession import HTTPSession
     from oauth2client.service_account import ServiceAccountCredentials
 
     enabled = True
@@ -117,6 +116,10 @@ def parse_spreadsheet(spreadsheet, worksheet_num):
     return parse_worksheet(worksheet)
 
 
+def is_url_key(key):
+    return key.startswith('https://')
+
+
 class TimeoutSession(Session):
     def request(self, *args, **kwargs):
         kwargs.setdefault('timeout', 300)
@@ -131,6 +134,10 @@ class GoogleSpreadsheet(BaseQueryRunner):
     @classmethod
     def annotate_query(cls):
         return False
+    
+    @classmethod
+    def name(cls):
+        return "Google Sheets"
 
     @classmethod
     def type(cls):
@@ -162,19 +169,14 @@ class GoogleSpreadsheet(BaseQueryRunner):
         key = json_loads(b64decode(self.configuration['jsonKeyFile']))
         creds = ServiceAccountCredentials.from_json_keyfile_dict(key, scope)
 
-        timeout_session = HTTPSession()
+        timeout_session = Session()
         timeout_session.requests_session = TimeoutSession()
-        spreadsheetservice = gspread.Client(auth=creds, http_session=timeout_session)
+        spreadsheetservice = gspread.Client(auth=creds, session=timeout_session)
         spreadsheetservice.login()
         return spreadsheetservice
 
     def test_connection(self):
         self._get_spreadsheet_service()
-
-    def is_url_key(self, key):
-        if key.startswith('https://'):
-            return True
-        return False
 
     def run_query(self, query, user):
         logger.debug("Spreadsheet is about to execute query: %s", query)
@@ -183,7 +185,7 @@ class GoogleSpreadsheet(BaseQueryRunner):
         try:
             spreadsheet_service = self._get_spreadsheet_service()
 
-            if self.is_url_key(key):
+            if is_url_key(key):
                 spreadsheet = spreadsheet_service.open_by_url(key)
             else:
                 spreadsheet = spreadsheet_service.open_by_key(key)

@@ -12,7 +12,8 @@ import './HelpTrigger.less';
 const DOMAIN = 'https://redash.io';
 const HELP_PATH = '/help';
 const IFRAME_TIMEOUT = 20000;
-const TYPES = {
+
+export const TYPES = {
   HOME: [
     '',
     'Help',
@@ -25,21 +26,59 @@ const TYPES = {
     '/user-guide/dashboards/sharing-dashboards',
     'Guide: Sharing and Embedding Dashboards',
   ],
+  AUTHENTICATION_OPTIONS: [
+    '/user-guide/users/authentication-options',
+    'Guide: Authentication Options',
+  ],
+  DS_ATHENA: [
+    '/data-sources/amazon-athena-setup',
+    'Guide: Help Setting up Amazon Athena',
+  ],
+  DS_BIGQUERY: [
+    '/data-sources/bigquery-setup',
+    'Guide: Help Setting up BigQuery',
+  ],
+  DS_URL: [
+    '/data-sources/querying-urls',
+    'Guide: Help Setting up URL',
+  ],
+  DS_MONGODB: [
+    '/data-sources/mongodb-setup',
+    'Guide: Help Setting up MongoDB',
+  ],
+  DS_GOOGLE_SPREADSHEETS: [
+    '/data-sources/querying-a-google-spreadsheet',
+    'Guide: Help Setting up Google Spreadsheets',
+  ],
+  DS_GOOGLE_ANALYTICS: [
+    '/data-sources/google-analytics-setup',
+    'Guide: Help Setting up Google Analytics',
+  ],
+  DS_AXIBASETSD: [
+    '/data-sources/axibase-time-series-database',
+    'Guide: Help Setting up Axibase Time Series',
+  ],
+  DS_RESULTS: [
+    '/user-guide/querying/query-results-data-source',
+    'Guide: Help Setting up Query Results',
+  ],
 };
 
 export class HelpTrigger extends React.Component {
   static propTypes = {
     type: PropTypes.oneOf(Object.keys(TYPES)).isRequired,
     className: PropTypes.string,
-  }
+    children: PropTypes.node,
+  };
 
   static defaultProps = {
     className: null,
+    children: <i className="fa fa-question-circle" />,
   };
 
-  iframeRef = null
+  iframeRef = null;
 
-  iframeLoadingTimeout = null
+  iframeLoadingTimeout = null;
 
   constructor(props) {
     super(props);
@@ -64,12 +103,12 @@ export class HelpTrigger extends React.Component {
     this.iframeLoadingTimeout = setTimeout(() => {
       this.setState({ error: url, loading: false });
     }, IFRAME_TIMEOUT); // safety
-  }
+  };
 
   onIframeLoaded = () => {
     this.setState({ loading: false });
     clearTimeout(this.iframeLoadingTimeout);
-  }
+  };
 
   openDrawer = () => {
     this.setState({ visible: true });
@@ -78,11 +117,11 @@ export class HelpTrigger extends React.Component {
 
     // wait for drawer animation to complete so there's no animation jank
     setTimeout(() => this.loadIframe(url), 300);
-  }
+  };
 
   closeDrawer = () => {
     this.setState({ visible: false });
-  }
+  };
 
   render() {
     const [, tooltip] = TYPES[this.props.type];
@@ -92,7 +131,7 @@ export class HelpTrigger extends React.Component {
       <React.Fragment>
         <Tooltip title={tooltip}>
           <a href="javascript: void(0)" onClick={this.openDrawer} className={className}>
-            <i className="fa fa-question-circle" />
+            {this.props.children}
           </a>
         </Tooltip>
         <Drawer

@@ -1,6 +1,36 @@
 import _ from 'lodash';
+import dashboardGridOptions from '@/config/dashboard-grid-options';
 
 export let Dashboard = null; // eslint-disable-line import/no-mutable-exports
+
+export function collectDashboardFilters(dashboard, queryResults, urlParams) {
+  const filters = {};
+  queryResults.forEach((queryResult) => {
+    const queryFilters = queryResult.getFilters();
+    queryFilters.forEach((queryFilter) => {
+      const hasQueryStringValue = _.has(urlParams, queryFilter.name);
+
+      if (!(hasQueryStringValue || dashboard.dashboard_filters_enabled)) {
+        // If dashboard filters not enabled, or no query string value given,
+        // skip filters linking.
+        return;
+      }
+
+      if (hasQueryStringValue) {
+        queryFilter.current = urlParams[queryFilter.name];
+      }
+
+      const filter = { ...queryFilter };
+      if (!_.has(filters, queryFilter.name)) {
+        filters[filter.name] = filter;
+      } else {
+        filters[filter.name].values = _.union(filters[filter.name].values, filter.values);
+      }
+    });
+  });
+
+  return _.values(filters);
+}
 
 function prepareWidgetsForDashboard(widgets) {
   // Default height for auto-height widgets.
@@ -46,7 +76,7 @@ function prepareWidgetsForDashboard(widgets) {
   return widgets;
 }
 
-function DashboardService($resource, $http, $location, currentUser, Widget, dashboardGridOptions) {
+function DashboardService($resource, $http, $location, currentUser, Widget) {
   function prepareDashboardWidgets(widgets) {
     return prepareWidgetsForDashboard(_.map(widgets, widget => new Widget(widget)));
   }
@@ -180,7 +210,8 @@ function DashboardService($resource, $http, $location, currentUser, Widget, dash
       }
     });
     return _.values(_.each(globalParams, (param) => {
-      param.fromUrlParams(queryParams);
+      param.setValue(param.getValue()); // apply global param value to all locals
+      param.fromUrlParams(queryParams); // try to initialize from url (may do nothing)
     }));
   };
 
