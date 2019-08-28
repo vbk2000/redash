@@ -100,4 +100,22 @@
       }
     }
   }
+
+  /* START table x scroll */
+  height: 100%;
+
+  & div {
+    height: inherit;
+  }
+
+  .ant-spin-container {
+    display: flex;
+    flex-direction: column;
+
+    .ant-table {
+      flex-grow: 1;
+      overflow-x: auto;
+    }
+  }
+  /* END */
 }
