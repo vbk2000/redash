@@ -102,19 +102,21 @@
   }
 
   /* START table x scroll */
-  height: 100%;
+  .dashboard-widget-wrapper:not(.widget-auto-height-enabled) & {
+    height: 100%;
 
-  & div {
-    height: inherit;
-  }
+    & div {
+      height: inherit;
+    }
 
-  .ant-spin-container {
-    display: flex;
-    flex-direction: column;
+    .ant-spin-container {
+      display: flex;
+      flex-direction: column;
 
-    .ant-table {
-      flex-grow: 1;
-      overflow-x: auto;
+      .ant-table {
+        flex-grow: 1;
+        overflow-x: auto;
+      }
     }
   }
   /* END */
